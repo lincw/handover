@@ -74,3 +74,7 @@ git add -A && git commit -m "init on this machine"
 - 交班單會被貼進其他 agent 的 prompt：**永遠不要在單裡寫 token、密碼、憑證**。
 - Drive 同步有延遲：換裝置後先確認 Drive 圖示顯示同步完成再 `load`，否則讀到的是舊單。
 - 出現 Drive 衝突副本（`xxx (1).md`）時兩張都會被索引，人工挑一張留下即可——每單一檔的設計讓衝突永遠只影響單一張單。
+
+## License
+
+MIT，見 [LICENSE](LICENSE)。
