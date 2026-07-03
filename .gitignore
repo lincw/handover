@@ -2,5 +2,4 @@
 Icon?
 *.tmp
 
-# 交班單是資料，由 Google Drive 同步；git 只追蹤工具本身
 handovers/

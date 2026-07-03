@@ -1,59 +1,61 @@
-# 設計理念與取捨
+# Design Rationale and Tradeoffs
 
-記錄這個系統為什麼長這樣，讓未來的修改不會在不知情下推翻當初有理由的決定。
+[繁體中文說明](design_tw.md)
 
-## 要解決的問題
+Documents why the system is designed this way, so future changes don't unknowingly overturn decisions that had good reasons.
 
-跨裝置、跨 agent、跨帳號的工作延續性。Claude Code 的 `--resume`、auto memory 都限於同一台機器同一個 agent；`/compact` 是有損壓縮且不受控。而且 context 塞滿時有兩個實證問題：context rot（越滿、對早期 token 的注意力越衰減）與 context anxiety（模型自覺空間不足時走捷徑、草草收尾）。所以策略是：**把值得記的寫出來（handover），然後用乾淨的 context 重啟**，而不是帶著 80k 的舊 context 繼續跑。
+## Problem Statement
 
-## 核心決策
+Cross-device, cross-agent, cross-account work continuation. Claude Code's `--resume` and auto-memory work only on a single machine with a single agent; `/compact` is lossy and uncontrolled. When context fills up, two empirical problems emerge: context rot (more tokens → less attention on early text) and context anxiety (model takes shortcuts and wraps up early when sensing space pressure). Strategy: **write out what matters (handover), then restart with clean context**, rather than carrying 80k tokens of aging context forward.
 
-### Markdown 為真、SQLite 為索引
+## Core Decisions
 
-真相是 `handovers/` 裡一張一個的 md 檔；SQLite 只提供列表與 FTS5 搜尋，放本機 `~/.cache/`，可隨時重建。理由：
+### Markdown is Truth, SQLite is Index
 
-- 二進位資料庫走雲端同步有損毀風險（WAL 附屬檔、部分同步），純文字沒有。
-- Drive 衝突發生時，每單一檔的設計把影響範圍鎖在單一張單，且衝突副本人眼可讀可裁決。
-- 交班單的主要讀者是 LLM 與人，markdown 對兩者都是原生格式；JSON 的「機器好解析」在這裡沒有消費者。
-- 量級是個人使用（一年數百張），grep/FTS5 都綽綽有餘，不需要真正的資料庫。
+Notes live as individual md files in `handovers/`; SQLite only provides listing and FTS5 search, stored locally at `~/.cache/handover/`, and can rebuild anytime. Why:
 
-### 兩層 schema
+- Binary databases over cloud sync risk corruption (WAL sidecar files, partial syncs). Plain text doesn't.
+- Drive conflicts affect one note per note—readable, easy to arbitrate by eye.
+- Main note readers are LLMs and humans; markdown is native for both. JSON's "easier for machines" has no consumer here.
+- Scale is personal use (~hundreds per year); grep and FTS5 are plenty; no need for a real database.
 
-- **Layer 1（內文）**：純文字通用層，任何 agent 可讀。跨 agent 交班只給這層（`load.sh --layer1-only`）。
-- **Layer 2（frontmatter）**：環境 metadata（device、branch、working_dir、account、test_status），只有回到同環境才有用。
+### Two-Layer Schema
 
-### 集中存放，不分散進各專案 repo
+- **Layer 1 (body)**: Pure text, generic layer readable by any agent. Cross-agent handover uses only this (`load.sh --layer1-only`).
+- **Layer 2 (frontmatter)**: Environment metadata (device, branch, working_dir, account, test_status), useful only returning to the same environment.
 
-用 `project` 欄位區分，而非把交班單放進各專案。因為一半的 session（討論、coaching、admin）根本沒有 repo，且「列出我所有 open 的單」這種跨專案查詢是換裝置時的第一個動作。
+### Centralized Storage, Not Scattered per Project
 
-### 同步用 Google Drive，git 只做本機版本紀錄
+Use a `project` field rather than scattering notes across project repos. Reason: half of sessions (discussion, coaching, admin) have no repo. "List all my open notes" (first action when switching devices) needs to span projects.
 
-使用者的明確選擇：單人多裝置，同時寫入幾乎不會發生，Drive 的便利勝過 git 的顯性同步。代價（已知並接受）：同步延遲時的沉默過期——所以 load.sh 印時效標頭、README 提醒換裝置先看同步狀態。git 目錄放 Drive 之外（`~/Git_repo/handover.git`），因為 `.git` 的海量小檔不適合雲端同步；git 的角色是誤刪救援與歷史，不是同步。
+### Sync via Google Drive, Git for Local History Only
 
-### session_type 決定摘要深度
+User's explicit choice: single person, multiple devices, concurrent writes almost never happen, Drive convenience wins over explicit git sync. Known tradeoff (accepted): silent staleness during sync—so load.sh prints a staleness header and README reminds about checking sync before switching. Git dir lives outside Drive (`~/Git_repo/handover.git`) because `.git`'s many small files aren't cloud-sync-friendly; git's role is recovery and history, not sync.
 
-sdd / debug / discussion / admin 四型。關鍵洞察：debug 型最有價值的欄位是 attempted_approaches——「試過什麼、為什麼不行」比最終解法更值得留；sdd 型有設計文件可還原，交班單只記進度與偏離。
+### session_type Determines Summary Depth
 
-### 沒有 hibernate
+Four types: sdd / debug / discussion / admin. Key insight: debug's most valuable field is attempted_approaches—"tried this, here's why it failed" matters more than the final solution. sdd has design docs; the note just records progress and deviations.
 
-曾考慮過「暫存大 context 之後回來」的 hibernate 指令，推導後放棄：cache miss 只是多花錢不會丟資訊，而保留大 context 反而承受 context rot。hibernate 想保留的欄位（conversation_summary、lessons_learned、attempted_approaches）全部併入 Layer 1。任何情境下 handover + 乾淨重啟都不劣於暫存。
+### No Hibernate
 
-### 狀態機：open → done / superseded
+Considered a "save large context, come back later" hibernate command, then rejected. Cache miss just costs money, not data. But keeping large context incurs rot. Hibernate would save (conversation_summary, lessons_learned, attempted_approaches)—all already in Layer 1. Handover + clean restart is never worse than hibernation.
 
-「過期的 open 單比沒有單更危險」——接手的 agent 會自信地執行過期的 next steps。所以接手後必須標掉舊單（mark.sh），load 預設只挑 open。
+### State Machine: open → done / superseded
 
-## 與其他機制的分界
+"Stale open notes are more dangerous than no notes"—the agent taking over executes stale next steps with full confidence. So taking over requires marking old notes (mark.sh); load defaults to open only.
 
-| 機制 | 記什麼 | 壽命 |
+## Boundaries with Other Mechanisms
+
+| Mechanism | Records | Lifespan |
 |---|---|---|
-| handover | 狀態（做到哪、下一步） | 會過期，用完標掉 |
-| memory / CLAUDE.md | 事實、偏好、專案慣例 | 長期有效 |
-| session transcript | 逐字過程 | 本機、不可攜 |
+| handover | State (where you got to, next step) | Expires; mark done when used |
+| memory / CLAUDE.md | Facts, preferences, project conventions | Long-lived |
+| session transcript | Word-by-word process | Local only, not portable |
 
-Lessons learned 是兩者的橋：交班單裡發現長期有效的教訓，升級進 memory，然後從單中移除。
+Lessons learned bridges both: find long-term-applicable lessons in a note, upgrade to memory, remove from note.
 
-## 刻意不做的事
+## Intentionally Not Implemented
 
-- **SessionStart hook 自動注入**：容易撈錯單、瑣碎 session 不需要。若日後要做，只注入一行「有 N 張 open 單」的提示，載入仍由人觸發。
-- **SessionEnd 自動交班**：強制產出的摘要品質差、垃圾卡片污染索引。什麼值得被記住，這個判斷留在人身上。
-- **加密／權限**：定位是個人工具；規則是從源頭不寫入機密，而非事後保護。
+- **SessionStart hook auto-injection**: Easy to pull the wrong note, lightweight sessions don't need it. If needed later, only inject one-liner "you have N open notes", load stays manual.
+- **SessionEnd auto-handover**: Forced summaries have poor quality, garbage notes pollute the index. The decision of what's worth remembering belongs to humans.
+- **Encryption / Access Control**: Scoped as personal tool; security model is "never write secrets at source" not "protect after the fact".
