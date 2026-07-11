@@ -15,7 +15,7 @@ Cross-device, cross-agent, cross-account work continuation. Claude Code's `--res
 Notes live as individual md files in `handovers/`; SQLite only provides listing and FTS5 search, stored locally at `~/.cache/handover/`, and can rebuild anytime. Why:
 
 - Binary databases over cloud sync risk corruption (WAL sidecar files, partial syncs). Plain text doesn't.
-- Drive conflicts affect one note per note—readable, easy to arbitrate by eye.
+- Sync conflicts affect one note per note—readable, easy to arbitrate by eye.
 - Main note readers are LLMs and humans; markdown is native for both. JSON's "easier for machines" has no consumer here.
 - Scale is personal use (~hundreds per year); grep and FTS5 are plenty; no need for a real database.
 
@@ -28,9 +28,9 @@ Notes live as individual md files in `handovers/`; SQLite only provides listing 
 
 Use a `project` field rather than scattering notes across project repos. Reason: half of sessions (discussion, coaching, admin) have no repo. "List all my open notes" (first action when switching devices) needs to span projects.
 
-### Sync via Google Drive, Git for Local History Only
+### Sync via a File-Sync Service, Git for Local History Only
 
-User's explicit choice: single person, multiple devices, concurrent writes almost never happen, Drive convenience wins over explicit git sync. Known tradeoff (accepted): silent staleness during sync—so load.sh prints a staleness header and README reminds about checking sync before switching. Git dir lives outside Drive (`~/Git_repo/handover.git`) because `.git`'s many small files aren't cloud-sync-friendly; git's role is recovery and history, not sync.
+User's explicit choice: single person, multiple devices, concurrent writes almost never happen, so the convenience of a file-sync service (Google Drive, Dropbox, iCloud, any of them) wins over explicit git sync. Known tradeoff (accepted): silent staleness during sync—so load.sh prints a staleness header and README reminds about checking sync before switching. Git dir lives outside the synced folder (`~/Git_repo/handover.git`) because `.git`'s many small files aren't cloud-sync-friendly; git's role is recovery and history, not sync.
 
 ### session_type Determines Summary Depth
 

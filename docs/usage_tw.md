@@ -37,7 +37,7 @@ H="$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover"
 2. 驗證現況（branch 是否還在、檔案是否被改過），有出入以現況為準
 3. 把接手的單標成 `superseded`（之後會存新單）或 `done`
 
-### 交班給其他 agent（Gemini、ChatGPT⋯⋯）
+### 交班給其他 agent（Antigravity、ChatGPT⋯⋯）
 
 ```bash
 "$H/scripts/load.sh" --project <專案> --layer1-only

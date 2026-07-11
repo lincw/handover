@@ -4,10 +4,12 @@
 
 This is the complete reference. Day-to-day, you won't touch scripts directly—say "handover" or "take over" to Claude and the skill handles it. This documents the underlying behavior for debugging and manual operation.
 
-Examples below use `$H` for this folder:
+Examples below use `$H` for this folder (wherever your sync service puts it):
 
 ```bash
-H="$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover"
+H="<path-to-your-synced-handover-folder>"
+# e.g. Google Drive: "$HOME/Library/CloudStorage/GoogleDrive-<email>/My Drive/handover"
+#      Dropbox:      "$HOME/Dropbox/handover"
 ```
 
 ## Contents
@@ -49,8 +51,8 @@ Output contains only the generic layer (frontmatter environment metadata removed
 
 ### Switching Devices
 
-1. Old device: hand over (wait for Drive icon to show sync complete before leaving)
-2. New device: confirm Drive has synced, then take over
+1. Old device: hand over (wait for your sync client to show sync complete before leaving)
+2. New device: confirm sync has completed, then take over
 
 ---
 
@@ -193,13 +195,13 @@ test_status: 3 failing in parser_test
 
 ## Troubleshooting
 
-**load returns a stale note** — Drive hasn't finished syncing. Watch the Drive icon in the menu bar and wait for it to complete; confirm the handover folder is set to Mirror files, not online-only.
+**load returns a stale note** — Sync hasn't finished. Wait for your sync client to show complete; confirm the handover folder is kept locally (mirrored/offline), not online-only.
 
-**Script reports `no such file` or reads empty file** — Files were evicted to online-only. In Drive preferences, set the handover folder to Mirror files.
+**Script reports `no such file` or reads empty file** — Files were evicted to online-only by your sync client. Set the handover folder to be kept locally (Google Drive: Mirror files; Dropbox: Make available offline; OneDrive: Always keep on this device).
 
 **Index looks wrong (missing notes in list, search can't find things)** — Delete `~/.cache/handover/index.db`; any script will auto-rebuild it next run. Index is always disposable.
 
-**Conflict copy appears (`xxx (1).md`)** — Two machines edited the same file before sync completed (usually both tried to mark the same note). Both get indexed; `cat` both and keep one, delete the other.
+**Conflict copy appears (`xxx (1).md`, `xxx (conflicted copy).md`—naming varies by service)** — Two machines edited the same file before sync completed (usually both tried to mark the same note). Both get indexed; `cat` both and keep one, delete the other.
 
 **`sqlite3` or `python3` not found** — Both are built into macOS; if you use a minimal shell with custom PATH, confirm `/usr/bin` is in PATH. No third-party packages needed (no PyYAML—frontmatter is hand-parsed).
 

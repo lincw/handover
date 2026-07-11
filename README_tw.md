@@ -2,7 +2,7 @@
 
 跨裝置、跨 agent、跨帳號的工作延續工具，做成一個 Claude Code skill。
 
-核心設計：**markdown 為真、SQLite 為索引**。交班單是一張一個的 `.md` 檔（本資料夾由 Google Drive 同步到所有裝置）；SQLite FTS5 索引放在本機 `~/.cache/handover/index.db`，可隨時從 md 檔重建，刻意不進 Drive——二進位資料庫走雲端同步有損毀風險，而索引丟了毫無損失。
+核心設計：**markdown 為真、SQLite 為索引**。交班單是一張一個的 `.md` 檔——把本資料夾放進任何會同步的資料夾（Google Drive、Dropbox、iCloud Drive、OneDrive、Syncthing⋯⋯）就能跟著你到每台裝置；SQLite FTS5 索引放在本機 `~/.cache/handover/index.db`，可隨時從 md 檔重建，刻意不進同步資料夾——二進位資料庫走雲端同步有損毀風險，而索引丟了毫無損失。
 
 ## 結構
 
@@ -44,36 +44,38 @@ scripts/search.sh "parser"
 
 ## 新裝置設定
 
-1. 裝好 Google Drive 桌面版，等本資料夾同步下來，並在 Drive 偏好設定把它設為**可離線／鏡像**（避免檔案被 evict 成 online-only）。
-2. 把 skill 連進 Claude Code：
+1. 裝好你的同步軟體，等本資料夾同步下來，並確認檔案保留在本機而非 online-only（Google Drive：**鏡像檔案**；Dropbox：**可離線取用**；OneDrive：**一律保留在此裝置上**）。
+2. 把 skill 連進 Claude Code，路徑指向你的同步服務放置本資料夾的位置：
 
 ```bash
-ln -s "$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover" \
-      "$HOME/.claude/skills/handover"
+# 例 Google Drive： "$HOME/Library/CloudStorage/GoogleDrive-<email>/My Drive/handover"
+#    Dropbox：      "$HOME/Dropbox/handover"
+#    iCloud Drive： "$HOME/Library/Mobile Documents/com~apple~CloudDocs/handover"
+ln -s "<你的同步資料夾中的 handover 路徑>" "$HOME/.claude/skills/handover"
 ```
 
 3. （可選）本機 git 版本紀錄，見下節。
 
 ## Git 版本紀錄
 
-本資料夾是一個 git 工作樹，但 git 目錄放在 Drive 之外的 `~/Git_repo/handover.git`（`.git` 只是一個指標檔），因為 `.git` 裡成千上萬個小物件檔不適合走雲端同步。
+本資料夾是一個 git 工作樹，但 git 目錄放在同步資料夾之外的 `~/Git_repo/handover.git`（`.git` 只是一個指標檔），因為 `.git` 裡成千上萬個小物件檔不適合走雲端同步。
 
-git 在這裡的角色是**本機版本歷史／誤刪救援**，不是同步機制——同步始終由 Google Drive 負責。因此每台機器的 git 歷史是各自獨立的。在其他機器上若也要版本紀錄：
+git 在這裡的角色是**本機版本歷史／誤刪救援**，不是同步機制——同步始終由你的同步服務負責。因此每台機器的 git 歷史是各自獨立的。在其他機器上若也要版本紀錄：
 
 ```bash
-cd "$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover"
-rm .git   # 移除指向別台機器路徑的指標檔（會經 Drive 同步回來，屬預期）
+cd "<你的同步資料夾中的 handover 路徑>"
+rm .git   # 移除指向別台機器路徑的指標檔（會被同步回來，屬預期）
 git init --separate-git-dir "$HOME/Git_repo/handover.git"
 git add -A && git commit -m "init on this machine"
 ```
 
-注意 `.git` 指標檔會被 Drive 同步：它指向 `/Users/<你>/Git_repo/handover.git`，只要各機器使用者名稱與路徑相同就都能用；路徑不存在的機器上 git 指令會報錯，但 scripts 完全不受影響。
+注意 `.git` 指標檔和一般檔案一樣會被同步：它指向 `/Users/<你>/Git_repo/handover.git`，只要各機器使用者名稱與路徑相同就都能用；路徑不存在的機器上 git 指令會報錯，但 scripts 完全不受影響。
 
 ## 注意事項
 
 - 交班單會被貼進其他 agent 的 prompt：**永遠不要在單裡寫 token、密碼、憑證**。
-- Drive 同步有延遲：換裝置後先確認 Drive 圖示顯示同步完成再 `load`，否則讀到的是舊單。
-- 出現 Drive 衝突副本（`xxx (1).md`）時兩張都會被索引，人工挑一張留下即可——每單一檔的設計讓衝突永遠只影響單一張單。
+- 雲端同步有延遲：換裝置後先確認同步軟體顯示同步完成再 `load`，否則讀到的是舊單。
+- 同步服務產生衝突副本（`xxx (1).md`、`xxx (conflicted copy).md` 等）時兩張都會被索引，人工挑一張留下即可——每單一檔的設計讓衝突永遠只影響單一張單。
 
 ## License
 

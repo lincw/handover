@@ -1,11 +1,11 @@
 ---
 name: handover
-description: Handover system — cross-device, cross-agent, cross-account work continuation. Generate a structured handover note at session end (markdown on Google Drive, SQLite indexed locally) and resume on any machine or agent. When the user says "handover", "hand over", "save progress", "switching devices/accounts", "switching to Gemini", or "that's enough for today", use it to hand over; when they say "take over", "where did I leave off", "continue yesterday's work", "resume", or want context at a new session start, use it to load. Also use for listing or searching past notes (e.g., "what methods have I tried before").
+description: Handover system — cross-device, cross-agent, cross-account work continuation. Generate a structured handover note at session end (markdown in a cloud-synced folder, SQLite indexed locally) and resume on any machine or agent. When the user says "handover", "hand over", "save progress", "switching devices/accounts", "switching to Gemini", or "that's enough for today", use it to hand over; when they say "take over", "where did I leave off", "continue yesterday's work", "resume", or want context at a new session start, use it to load. Also use for listing or searching past notes (e.g., "what methods have I tried before").
 ---
 
 # Handover Notes
 
-Markdown files are the single source of truth (stored on Google Drive, synced across devices); SQLite is just a local index that any script can rebuild. All scripts live in the `scripts/` folder within this skill. Script paths contain spaces—always quote them.
+Markdown files are the single source of truth (stored in a cloud-synced folder—Google Drive, Dropbox, iCloud, etc.—so notes follow you across devices); SQLite is just a local index that any script can rebuild. All scripts live in the `scripts/` folder within this skill. Script paths contain spaces—always quote them.
 
 ## Handing Over (before session end)
 

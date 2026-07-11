@@ -1,12 +1,12 @@
 # Handover — Work Continuation System
 
-A tool for cross-device, cross-agent, cross-account work continuation in Claude Code. End a session by creating a structured handover note (markdown synced via Google Drive, SQLite indexed locally), then pick it up on any machine or with any agent.
+A tool for cross-device, cross-agent, cross-account work continuation in Claude Code. End a session by creating a structured handover note (markdown in a cloud-synced folder, SQLite indexed locally), then pick it up on any machine or with any agent.
 
 [繁體中文](README_tw.md)
 
 ## Core Design
 
-**Markdown is truth, SQLite is just an index**. Handover notes are individual `.md` files (this folder syncs to all devices via Google Drive); the SQLite FTS5 index lives locally at `~/.cache/handover/index.db` and can be rebuilt anytime. We deliberately keep it off Drive—binary databases over cloud sync risk corruption (WAL sidecar files, partial syncs), while losing the index is harmless.
+**Markdown is truth, SQLite is just an index**. Handover notes are individual `.md` files; put this folder in any synced folder—Google Drive, Dropbox, iCloud Drive, OneDrive, Syncthing…—and it follows you to every device. The SQLite FTS5 index lives locally at `~/.cache/handover/index.db` and can be rebuilt anytime. We deliberately keep it out of the synced folder—binary databases over cloud sync risk corruption (WAL sidecar files, partial syncs), while losing the index is harmless.
 
 ## Structure
 
@@ -48,36 +48,38 @@ Full reference: [docs/usage.md](docs/usage.md)
 
 ## New Device Setup
 
-1. Install Google Drive desktop and wait for this folder to sync. In Drive preferences, set it to **Mirror files** (avoid online-only).
-2. Link the skill to Claude Code:
+1. Install your sync client and wait for this folder to sync. Make sure files are kept locally, not online-only (Google Drive: **Mirror files**; Dropbox: **Make available offline**; OneDrive: **Always keep on this device**).
+2. Link the skill to Claude Code, pointing at wherever your sync service puts this folder:
 
 ```bash
-ln -s "$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover" \
-      "$HOME/.claude/skills/handover"
+# e.g. Google Drive: "$HOME/Library/CloudStorage/GoogleDrive-<email>/My Drive/handover"
+#      Dropbox:      "$HOME/Dropbox/handover"
+#      iCloud Drive: "$HOME/Library/Mobile Documents/com~apple~CloudDocs/handover"
+ln -s "<path-to-your-synced-handover-folder>" "$HOME/.claude/skills/handover"
 ```
 
 3. (Optional) Local git history; see next section.
 
 ## Git Version History
 
-This folder is a git worktree, but the git directory lives outside Drive at `~/Git_repo/handover.git` (`.git` is just a pointer file). This is because `.git` contains thousands of small object files—poor fit for cloud sync.
+This folder is a git worktree, but the git directory lives outside the synced folder at `~/Git_repo/handover.git` (`.git` is just a pointer file). This is because `.git` contains thousands of small object files—poor fit for cloud sync.
 
-Git's role here is **local version history and recovery**, not sync—Google Drive handles sync. Each machine has independent git history. To enable version history on another machine:
+Git's role here is **local version history and recovery**, not sync—your sync service handles sync. Each machine has independent git history. To enable version history on another machine:
 
 ```bash
-cd "$HOME/Library/CloudStorage/GoogleDrive-<your-email>/My Drive/handover"
-rm .git   # Remove pointer file from other machine (will sync back via Drive, expected)
+cd "<path-to-your-synced-handover-folder>"
+rm .git   # Remove pointer file from other machine (will sync back, expected)
 git init --separate-git-dir "$HOME/Git_repo/handover.git"
 git add -A && git commit -m "init on this machine"
 ```
 
-Note: the `.git` pointer file will sync via Drive. It points to `/Users/<username>/Git_repo/handover.git`—works on any machine if usernames and paths match. On machines where that path doesn't exist, git commands will error, but scripts work fine.
+Note: the `.git` pointer file syncs like any other file. It points to `/Users/<username>/Git_repo/handover.git`—works on any machine if usernames and paths match. On machines where that path doesn't exist, git commands will error, but scripts work fine.
 
 ## Important Notes
 
 - Handover notes get pasted into other agents' prompts: **Never write tokens, passwords, or credentials in a note**.
-- Drive sync has latency: after switching devices, confirm Drive's sync icon shows complete before `load`, or you'll read stale notes.
-- If Drive creates conflict copies (e.g., `xxx (1).md`), both get indexed. Manually pick one to keep—one-file-per-note design means conflicts affect only that one note.
+- Cloud sync has latency: after switching devices, confirm your sync client shows complete before `load`, or you'll read stale notes.
+- If your sync service creates conflict copies (e.g., `xxx (1).md`, `xxx (conflicted copy).md`), both get indexed. Manually pick one to keep—one-file-per-note design means conflicts affect only that one note.
 
 ## License
 
